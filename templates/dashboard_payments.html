@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Payments Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+      :root {
+        --bg-color: #f4f4f4;
+        --text-color: #000;
+        --table-bg: #fff;
+        --table-hover: #f1faff;
+        --header-bg: #007bff;
+        --header-text: #fff;
+        --button-bg: #e0e0e0;
+        --button-text: #000;
+      }
+
+      body.dark-mode {
+        --bg-color: #121212;
+        --text-color: #e0e0e0;
+        --table-bg: #1e1e1e;
+        --table-hover: #2a2a2a;
+        --header-bg: #333;
+        --header-text: #fff;
+        --button-bg: #333;
+        --button-text: #e0e0e0;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+        background: var(--bg-color);
+        color: var(--text-color);
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+
+      h1 {
+        margin-bottom: 1rem;
+      }
+
+      #themeToggle {
+        margin-bottom: 1rem;
+        padding: 0.5rem 1rem;
+        border: none;
+        background: var(--button-bg);
+        color: var(--button-text);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--table-bg);
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+        color: var(--text-color);
+      }
+
+      th,
+      td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+        cursor: default;
+      }
+
+      th.sortable {
+        cursor: pointer;
+      }
+
+      th.sortable:hover {
+        text-decoration: underline;
+      }
+
+      th {
+        background-color: var(--header-bg);
+        color: var(--header-text);
+        position: sticky;
+        top: 0;
+      }
+
+      tbody tr:hover {
+        background-color: var(--table-hover);
+      }
+
+      /* Layout adjustments */
+      .header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        background-color: var(--header-bg);
+        color: var(--header-text);
+        margin-bottom: 20px;
+      }
+
+      .header-title {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 1200px;
+        margin-bottom: 20px;
+      }
+
+      .filters-container {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 1200px;
+        margin-bottom: 20px;
+      }
+
+      .filters {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .filters input,
+      .filters select {
+        padding: 5px;
+        font-size: 14px;
+      }
+
+      .filters input[type="text"] {
+        width: 200px;
+      }
+
+      .export-buttons {
+        display: flex;
+        justify-content: space-between; /* Space out buttons evenly */
+        gap: 20px; /* Add some space between the buttons */
+        margin-top: 20px;
+      }
+
+      .export-buttons button {
+        padding: 10px 20px;
+        background-color: var(--button-bg);
+        color: var(--button-text);
+        border: none;
+        cursor: pointer;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+
+      .totals {
+        font-size: 16px;
+        font-weight: bold;
+        margin-top: 20px;
+      }
+
+      .totals p {
+        margin: 5px 0;
+      }
+
+      #canva {
+        display: flex;
+        max-width: 100%;
+        height: 300px; /* Fix the height of the chart */
+        justify-content: space-between;
+        margin-top: 5rem;
+        margin-bottom: 2rem;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      canvas {
+        max-width: 32%;
+        display: block;
+      }
+
+      /* Make it mobile responsive */
+      @media (max-width: 768px) {
+        .filters {
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .export-buttons {
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        #canva {
+          flex-direction: column;
+        }
+
+        canvas {
+          height: 200px; /* Adjust the chart height on mobile */
+          margin-bottom: 10px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        table,
+        .filters,
+        .export-buttons {
+          font-size: 14px;
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-title">
+        <h1>Payments Dashboard</h1>
+        <button id="themeToggle" onclick="toggleTheme()">
+          Toggle Dark Mode
+        </button>
+      </div>
+
+      <div class="filters-container">
+        <div class="filters">
+          <label
+            >Date Range: <input type="date" id="start-date" /> to
+            <input type="date" id="end-date" />
+          </label>
+          <label
+            >Status:
+            <select id="status-filter">
+              <option value="">All</option>
+              <option value="success">Success</option>
+              <option value="failed">Failed</option>
+              <option value="pending">Pending</option>
+            </select>
+          </label>
+          <input
+            type="text"
+            id="search"
+            placeholder="Search email, name, reference..."
+          />
+        </div>
+
+        <div class="export-buttons">
+          <button onclick="exportCSV()">Export CSV</button>
+          <button onclick="exportPDF()">Export PDF</button>
+        </div>
+      </div>
+
+      <div class="totals">
+        <p>
+          <strong>Total Revenue:</strong> ₵<span id="total-revenue">0.00</span>
+        </p>
+        <p>
+          <strong>Total Transactions:</strong>
+          <span id="transaction-count">0</span>
+        </p>
+      </div>
+    </div>
+
+    <table id="payments-table">
+      <thead>
+        <tr>
+          <th class="sortable">ID</th>
+          <th class="sortable">Reference</th>
+          <th class="sortable">Status</th>
+          <th class="sortable">Amount (₵)</th>
+          <th class="sortable">Email</th>
+          <th class="sortable">Full Name</th>
+          <th class="sortable">Paid At</th>
+          <th class="sortable">Chat ID</th>
+          <th class="sortable">Invite Link</th>
+          <!-- ✅ Add this -->
+        </tr>
+      </thead>
+
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" style="font-weight: bold; background: #f2f2f2">
+            Totals
+          </td>
+          <td
+            id="totalAmountCell"
+            style="font-weight: bold; background: #f2f2f2"
+          >
+            ₵0.00
+          </td>
+          <td colspan="4" style="background: #f2f2f2"></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <h2>Monthly Summary</h2>
+    <table id="monthly-summary">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Revenue (₵)</th>
+          <th>Transactions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <h2>Daily Summary</h2>
+    <table id="daily-summary">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Revenue (₵)</th>
+          <th>Transactions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h2>Yearly Summary</h2>
+    <table id="yearly-summary">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>Revenue (₵)</th>
+          <th>Transactions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="canva">
+      <canvas id="statusChart"></canvas>
+      <canvas id="barChart"></canvas>
+      <canvas id="lineChart"></canvas>
+    </div>
+
+    <div style="text-align: center">
+      <button id="prevBtn" disabled>Previous</button>
+      <span id="pageIndicator">Page 1</span>
+      <button id="nextBtn">Next</button>
+    </div>
+
+    <div id="userModal">
+      <button onclick="closeUserModal()" style="float: right">Close</button>
+      <h3>User Payment Details</h3>
+      <div id="userDetails"></div>
+    </div>
+
+    <script>
+      let statusChart, barChart, lineChart;
+      let originalData = [],
+        currentPage = 1,
+        rowsPerPage = 10,
+        sortKey = null,
+        sortAsc = true;
+
+      function toggleTheme() {
+        document.body.classList.toggle("dark-mode");
+      }
+
+      async function loadPayments() {
+        const response = await fetch("/all_payments");
+        const data = await response.json();
+        originalData = data.payments;
+        updateDashboard();
+      }
+
+      let dailyData = {};
+      let yearlyData = {};
+
+      function updateDashboard() {
+        const startDate = new Date(
+          document.getElementById("start-date").value || "2000-01-01",
+        );
+        const endDate = new Date(
+          document.getElementById("end-date").value || "3000-01-01",
+        );
+        const statusFilter = document.getElementById("status-filter").value;
+        const searchQuery = document
+          .getElementById("search")
+          .value.toLowerCase();
+
+        let totalRevenue = 0,
+          transactionCount = 0;
+        let statusCounts = { success: 0, failed: 0, pending: 0 };
+        let barData = {},
+          lineData = {},
+          monthlyData = {},
+          dailyData = {},
+          yearlyData = {};
+
+        const tbody = document.querySelector("#payments-table tbody");
+        tbody.innerHTML = "";
+
+        // Filter the full dataset
+        let filtered = originalData.filter((payment) => {
+          const paidAt = new Date(payment.paid_at);
+          return (
+            paidAt >= startDate &&
+            paidAt <= endDate &&
+            (!statusFilter || payment.status === statusFilter) &&
+            [payment.email, payment.full_name, payment.reference].some((v) =>
+              v?.toLowerCase().includes(searchQuery),
+            )
+          );
+        });
+
+        // Sort if needed
+        if (sortKey) {
+          filtered.sort((a, b) => {
+            const va = a[sortKey],
+              vb = b[sortKey];
+            return (va < vb ? -1 : va > vb ? 1 : 0) * (sortAsc ? 1 : -1);
+          });
+        }
+
+        // ✅ STATS & CHART DATA BASED ON FULL FILTERED DATASET
+        filtered.forEach((payment) => {
+          const paidAt = new Date(payment.paid_at);
+          const dateKey = paidAt.toISOString().split("T")[0];
+          const monthKey = paidAt.toISOString().slice(0, 7);
+          const yearKey = paidAt.getFullYear();
+
+          if (payment.status === "success") totalRevenue += payment.amount;
+          transactionCount++;
+          statusCounts[payment.status] =
+            (statusCounts[payment.status] || 0) + 1;
+          barData[dateKey] = (barData[dateKey] || 0) + 1;
+          lineData[dateKey] = (lineData[dateKey] || 0) + payment.amount;
+
+          monthlyData[monthKey] = monthlyData[monthKey] || {
+            revenue: 0,
+            count: 0,
+          };
+          monthlyData[monthKey].revenue += payment.amount;
+          monthlyData[monthKey].count++;
+
+          if (payment.status === "success") {
+            dailyData[dateKey] = dailyData[dateKey] || { amount: 0, count: 0 };
+            dailyData[dateKey].amount += payment.amount;
+            dailyData[dateKey].count++;
+
+            yearlyData[yearKey] = yearlyData[yearKey] || {
+              amount: 0,
+              count: 0,
+            };
+            yearlyData[yearKey].amount += payment.amount;
+            yearlyData[yearKey].count++;
+          }
+        });
+
+        // ✅ PAGINATE DISPLAY ONLY
+        const totalPages = Math.ceil(filtered.length / rowsPerPage);
+        const startIdx = (currentPage - 1) * rowsPerPage;
+        const paginated = filtered.slice(startIdx, startIdx + rowsPerPage);
+
+        document.getElementById("pageIndicator").textContent =
+          `Page ${currentPage} of ${totalPages}`;
+        document.getElementById("prevBtn").disabled = currentPage === 1;
+        document.getElementById("nextBtn").disabled =
+          currentPage === totalPages;
+
+        paginated.forEach((payment) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${payment.id}</td>
+            <td>${payment.reference}</td>
+            <td>${payment.status}</td>
+            <td>${(payment.amount / 100).toFixed(2)}</td>
+            <td><a href="javascript:void(0)" onclick="showUserDetails('${payment.email}')">${payment.email}</a></td>
+            <td>${payment.full_name}</td>
+            <td>${new Date(payment.paid_at).toLocaleString()}</td>
+            <td>${payment.chat_id}</td>
+            <td><a href="${payment.invite_link}" target="_blank">${payment.invite_link ? "Link" : ""}</a></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // ✅ Update Stats
+        document.getElementById("total-revenue").textContent = (
+          totalRevenue / 100
+        ).toFixed(2);
+        document.getElementById("totalAmountCell").textContent =
+          `₵${(totalRevenue / 100).toFixed(2)}`;
+        document.getElementById("transaction-count").textContent =
+          transactionCount;
+
+        // ✅ Charts
+        updateChart(
+          statusChart,
+          "pie",
+          "Payment Status Distribution",
+          Object.keys(statusCounts),
+          Object.values(statusCounts),
+          ["#28a745", "#dc3545", "#ffc107"],
+          "statusChart",
+        );
+
+        updateChart(
+          barChart,
+          "bar",
+          "Transactions Per Day",
+          Object.keys(barData),
+          Object.values(barData),
+          "#007BFF",
+          "barChart",
+        );
+
+        updateChart(
+          lineChart,
+          "line",
+          "Revenue Over Time",
+          Object.keys(lineData),
+          Object.values(lineData).map((a) => a / 100),
+          "#17a2b8",
+          "lineChart",
+        );
+
+        // ✅ Monthly Summary
+        const summaryBody = document.querySelector("#monthly-summary tbody");
+        summaryBody.innerHTML = "";
+        let monthlyTotalRevenue = 0,
+          monthlyTotalCount = 0;
+
+        Object.entries(monthlyData)
+          .sort()
+          .forEach(([month, stats]) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${month}</td><td>${(stats.revenue / 100).toFixed(2)}</td><td>${stats.count}</td>`;
+            summaryBody.appendChild(tr);
+            monthlyTotalRevenue += stats.revenue;
+            monthlyTotalCount += stats.count;
+          });
+
+        const totalRow = document.createElement("tr");
+        totalRow.innerHTML = `<td><strong>Total</strong></td><td><strong>${(monthlyTotalRevenue / 100).toFixed(2)}</strong></td><td><strong>${monthlyTotalCount}</strong></td>`;
+        summaryBody.appendChild(totalRow);
+
+        // ✅ Daily Summary
+        const dailyBody = document.querySelector("#daily-summary tbody");
+        dailyBody.innerHTML = "";
+        let dailyTotalRevenue = 0,
+          dailyTotalCount = 0;
+
+        Object.entries(dailyData)
+          .sort()
+          .forEach(([day, stats]) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${day}</td><td>${(stats.amount / 100).toFixed(2)}</td><td>${stats.count}</td>`;
+            dailyBody.appendChild(tr);
+            dailyTotalRevenue += stats.amount;
+            dailyTotalCount += stats.count;
+          });
+
+        const totalDailyRow = document.createElement("tr");
+        totalDailyRow.innerHTML = `<td><strong>Total</strong></td><td><strong>${(dailyTotalRevenue / 100).toFixed(2)}</strong></td><td><strong>${dailyTotalCount}</strong></td>`;
+        dailyBody.appendChild(totalDailyRow);
+
+        // ✅ Yearly Summary
+        const yearlyBody = document.querySelector("#yearly-summary tbody");
+        yearlyBody.innerHTML = "";
+        let yearlyTotalRevenue = 0,
+          yearlyTotalCount = 0;
+
+        Object.entries(yearlyData)
+          .sort()
+          .forEach(([year, stats]) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${year}</td><td>${(stats.amount / 100).toFixed(2)}</td><td>${stats.count}</td>`;
+            yearlyBody.appendChild(tr);
+            yearlyTotalRevenue += stats.amount;
+            yearlyTotalCount += stats.count;
+          });
+
+        const totalYearlyRow = document.createElement("tr");
+        totalYearlyRow.innerHTML = `<td><strong>Total</strong></td><td><strong>${(yearlyTotalRevenue / 100).toFixed(2)}</strong></td><td><strong>${yearlyTotalCount}</strong></td>`;
+        yearlyBody.appendChild(totalYearlyRow);
+      }
+
+      function updateChart(
+        instance,
+        type,
+        title,
+        labels,
+        data,
+        color,
+        canvasId,
+      ) {
+        const ctx = document.getElementById(canvasId).getContext("2d");
+
+        // Set dynamic width and height for the canvas
+        const canvas = document.getElementById(canvasId);
+        canvas.width = window.innerWidth * 0.8; // Set width to 80% of screen width
+        canvas.height = 400; // Set the height dynamically as well
+
+        if (instance) instance.destroy(); // Destroy previous instance if any
+
+        // Create new chart instance
+        instance = new Chart(ctx, {
+          type: type, // Chart type (pie, bar, line)
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: title,
+                data: data,
+                backgroundColor: Array.isArray(color) ? color : [color],
+                borderColor: color,
+                fill: type === "line", // For line charts, fill is true
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false, // Let Chart.js adjust the aspect ratio
+            plugins: {
+              legend: { position: type === "pie" ? "bottom" : "top" },
+              title: { display: true, text: title },
+            },
+          },
+        });
+
+        // Store the instance based on chart type for later use
+        if (type === "pie") statusChart = instance;
+        else if (type === "bar") barChart = instance;
+        else if (type === "line") lineChart = instance;
+      }
+
+      function exportCSV() {
+        const rows = [
+          [
+            "ID",
+            "Reference",
+            "Status",
+            "Amount",
+            "Email",
+            "Full Name",
+            "Paid At",
+            "Chat ID",
+            "Invite Link",
+          ],
+        ];
+
+        document.querySelectorAll("#payments-table tbody tr").forEach((tr) => {
+          const row = Array.from(tr.children).map((td) => td.textContent);
+          rows.push(row);
+        });
+        const csv = rows.map((r) => r.join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "payments.csv";
+        link.click();
+      }
+
+      async function exportPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF("landscape");
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const logoUrl =
+          "https://d8e6a434-365b-4b96-adbc-79aca2e6bf23-00-e3718azoznin.worf.replit.dev/static/logo.jpeg";
+        const logoSize = 10;
+
+        // 1. Add Header
+        const addHeader = () => {
+          doc.addImage(logoUrl, "JPEG", 10, 8, logoSize, logoSize);
+          doc.setFontSize(14);
+          doc.setTextColor(40);
+          doc.text("Payments Dashboard", pageWidth / 2, 14, {
+            align: "center",
+          });
+          doc.setLineWidth(0.1);
+          doc.line(10, 18, pageWidth - 10, 18);
+        };
+
+        let pageNumber = 1;
+        const addFooter = () => {
+          doc.setFontSize(8);
+          doc.text(
+            `Page ${pageNumber}`,
+            pageWidth - 20,
+            doc.internal.pageSize.getHeight() - 10,
+          );
+          pageNumber++;
+        };
+
+        doc.setDrawColor(0);
+        addHeader();
+        addFooter();
+
+        // 2. Total Revenue Calculation (update HTML cell too)
+        let total = 0;
+        const monthlyTotal = {};
+        const dailyTotal = {};
+        const yearlyTotal = {};
+
+        document.querySelectorAll("#payments-table tbody tr").forEach((tr) => {
+          const rawDate = tr.children[6]?.textContent?.trim(); // Paid At
+          const amount = parseFloat(tr.children[3]?.textContent); // Amount
+
+          // Try parsing date and validate it
+          const dateObj = new Date(rawDate);
+          if (isNaN(dateObj.getTime()) || isNaN(amount)) return;
+
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+          const day = String(dateObj.getDate()).padStart(2, "0");
+
+          total += amount;
+
+          const ym = `${year}-${month}`;
+          const yd = `${year}-${month}-${day}`;
+
+          monthlyTotal[ym] = (monthlyTotal[ym] || 0) + amount;
+          dailyTotal[yd] = (dailyTotal[yd] || 0) + amount;
+          yearlyTotal[year] = (yearlyTotal[year] || 0) + amount;
+        });
+
+        document.getElementById("totalAmountCell").textContent =
+          `₵${total.toFixed(2)}`;
+
+        // 3. Add Summary Table
+        let y = 22;
+        doc.setFontSize(10);
+        doc.text("Summary", 10, y);
+        y += 4;
+
+        const drawSummaryTable = (title, data, startY) => {
+          const keys = Object.keys(data).sort();
+          const rows = keys.map((key) => [key, `₵${data[key].toFixed(2)}`]);
+
+          doc.autoTable({
+            head: [[title, "Amount"]],
+            body: rows,
+            startY: startY,
+            margin: { left: 10 },
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [22, 160, 133], textColor: 255 },
+          });
+
+          return doc.lastAutoTable.finalY + 5;
+        };
+
+        y = drawSummaryTable("Monthly Summary", monthlyTotal, y);
+        y = drawSummaryTable("Daily Summary", dailyTotal, y);
+        y = drawSummaryTable("Yearly Summary", yearlyTotal, y);
+
+        // 4. Add Charts
+        const addChartImage = async (
+          canvasId,
+          x,
+          posY,
+          label,
+          width = 80,
+          height = 40,
+        ) => {
+          const canvas = document.getElementById(canvasId);
+          if (canvas) {
+            const imgData = canvas.toDataURL("image/png");
+            doc.setFontSize(10);
+            doc.text(label, x, posY);
+            doc.addImage(imgData, "PNG", x, posY + 2, width, height);
+          }
+        };
+
+        // Side-by-side charts
+        await addChartImage("barChart", 10, y, "Transactions per Day");
+        await addChartImage("lineChart", 110, y, "Revenue Over Time");
+        y += 50;
+
+        await addChartImage("statusChart", 10, y, "Status Breakdown");
+
+        // Status breakdown text next to pie chart
+        const pieLabels = document.querySelectorAll("#statusChartLabel li");
+        let pieTextY = y + 5;
+        pieLabels.forEach((label) => {
+          doc.text(label.textContent, 100, pieTextY);
+          pieTextY += 5;
+        });
+
+        y += 55;
+
+        // 5. Payments Table
+        doc.autoTable({
+          html: "#payments-table",
+          startY: y,
+          styles: {
+            overflow: "linebreak",
+            fontSize: 7,
+            cellPadding: 1.5,
+          },
+          margin: { top: 20, left: 10, right: 10 },
+          tableWidth: "auto",
+          theme: "grid",
+          headStyles: {
+            fillColor: [22, 160, 133],
+            textColor: 255,
+            halign: "center",
+          },
+          bodyStyles: {
+            valign: "top",
+          },
+          columnStyles: {
+            0: { cellWidth: "auto" },
+            1: { cellWidth: "auto" },
+            2: { cellWidth: "auto" },
+            3: { cellWidth: "auto" },
+            4: { cellWidth: "auto" },
+            5: { cellWidth: "auto" },
+            6: { cellWidth: "auto" },
+            7: { cellWidth: "auto" },
+          },
+          didDrawPage: () => {
+            addHeader();
+            addFooter();
+          },
+          useCss: true,
+        });
+
+        doc.save("payments.pdf");
+      }
+
+      function showUserDetails(email) {
+        const userPayments = originalData.filter((p) => p.email === email);
+        let html = `<p><strong>Email:</strong> ${email}</p><table><thead><tr><th>Reference</th><th>Status</th><th>Amount</th><th>Date</th></tr></thead><tbody>`;
+        userPayments.forEach((p) => {
+          html += `<tr><td>${p.reference}</td><td>${p.status}</td><td>${(p.amount / 100).toFixed(2)}</td><td>${p.paid_at}</td></tr>`;
+        });
+        html += "</tbody></table>";
+        document.getElementById("userDetails").innerHTML = html;
+        document.getElementById("userModal").style.display = "block";
+      }
+
+      function closeUserModal() {
+        document.getElementById("userModal").style.display = "none";
+      }
+
+      document.querySelectorAll("#payments-table th").forEach((th, idx) => {
+        const keys = [
+          "id",
+          "reference",
+          "status",
+          "amount",
+          "email",
+          "full_name",
+          "paid_at",
+          "chat_id",
+        ];
+        th.addEventListener("click", () => {
+          const key = keys[idx];
+          sortAsc = sortKey === key ? !sortAsc : true;
+          sortKey = key;
+          updateDashboard();
+        });
+      });
+
+      document
+        .getElementById("start-date")
+        .addEventListener("change", updateDashboard);
+      document
+        .getElementById("end-date")
+        .addEventListener("change", updateDashboard);
+      document
+        .getElementById("status-filter")
+        .addEventListener("change", updateDashboard);
+      document
+        .getElementById("search")
+        .addEventListener("input", updateDashboard);
+      document.getElementById("prevBtn").addEventListener("click", () => {
+        if (currentPage > 1) {
+          currentPage--;
+          updateDashboard();
+        }
+      });
+      document.getElementById("nextBtn").addEventListener("click", () => {
+        currentPage++;
+        updateDashboard();
+      });
+
+      window.onload = loadPayments;
+    </script>
+  </body>
+</html>

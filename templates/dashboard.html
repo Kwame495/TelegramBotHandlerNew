@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Webhook Bot - Dashboard</title>
+    <!-- Bootstrap CSS from Replit CDN -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fab fa-telegram me-2"></i>
+                Telegram Webhook Bot
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Bot Administration</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            This dashboard allows you to manage the Telegram webhook for your bot.
+                        </div>
+
+                        <div class="d-grid gap-3">
+                            <button id="setWebhookBtn" class="btn btn-primary">
+                                <i class="fas fa-link me-2"></i>
+                                Set Webhook
+                            </button>
+                            
+                            <button id="getWebhookInfoBtn" class="btn btn-secondary">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Get Webhook Info
+                            </button>
+                            
+                            <button id="deleteWebhookBtn" class="btn btn-danger">
+                                <i class="fas fa-unlink me-2"></i>
+                                Delete Webhook
+                            </button>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h4>Status</h4>
+                            <div id="webhookStatus" class="alert alert-secondary">
+                                <span class="text-muted">Click one of the buttons above to see webhook status.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h3>Bot Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h5>Available Commands</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <code>/start</code>
+                                        <span class="ms-2">Start the bot</span>
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <code>/help</code>
+                                        <span class="ms-2">Get help information</span>
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <code>/status</code>
+                                        <span class="ms-2">Check bot status</span>
+                                    </div>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <code>/info</code>
+                                        <span class="ms-2">Get information about the bot</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h3>Test Bot</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Test the bot's functionality without using Telegram.
+                        </div>
+                        
+                        <form id="testBotForm" class="mb-3">
+                            <div class="mb-3">
+                                <label for="testChatId" class="form-label">Chat ID (optional)</label>
+                                <input type="text" class="form-control" id="testChatId" placeholder="Enter a Telegram chat ID or leave empty to use a test ID">
+                                <div class="form-text">If provided, the message will be sent to a real chat.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="testMessage" class="form-label">Test Message</label>
+                                <select class="form-select" id="testMessage">
+                                    <option value="/start">Command: /start</option>
+                                    <option value="/help">Command: /help</option>
+                                    <option value="/status">Command: /status</option>
+                                    <option value="/info">Command: /info</option>
+                                    <option value="custom">Custom message</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3" id="customMessageContainer" style="display: none;">
+                                <label for="customMessage" class="form-label">Custom Message</label>
+                                <textarea class="form-control" id="customMessage" rows="3" placeholder="Enter a custom message"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary" id="sendTestBtn">
+                                <i class="fas fa-paper-plane me-2"></i>Send Test Message
+                            </button>
+                        </form>
+                        
+                        <div id="testResult" style="display: none;" class="mt-3">
+                            <h5>Test Result</h5>
+                            <div id="testResponse" class="alert alert-secondary">
+                                <span class="text-muted">Response will appear here.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

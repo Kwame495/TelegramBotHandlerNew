@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Make a Payment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --glass-bg: rgba(30, 30, 30, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --text-color: #ffffff;
+      --primary: #00b894;
+      --font: 'Inter', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      height: 100vh;
+      background: url('https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&w=1950&q=80') no-repeat center center / cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--text-color);
+    }
+
+    .glass-form {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .glass-form h2 {
+      text-align: center;
+      margin-bottom: 1.8rem;
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .glass-form label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #f0f0f0;
+    }
+
+    .glass-form input {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      margin-bottom: 1.2rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 1rem;
+      transition: border 0.3s ease, background 0.3s ease;
+    }
+
+    .glass-form input::placeholder {
+      color: #ccc;
+    }
+
+    .glass-form input:focus {
+      outline: none;
+      border-color: #00b894;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .glass-form button {
+      width: 100%;
+      padding: 0.9rem;
+      background-color: var(--primary);
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .glass-form button:hover {
+      background-color: #00a383;
+    }
+
+    @media (max-width: 500px) {
+      .glass-form {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <form id="paymentForm" class="glass-form">
+    <h2>Make Payment To Join A+ NextGenLearn Premium Group</h2>
+
+    <label for="full-name">Full Name:</label>
+    <input type="text" id="full-name" placeholder="John Doe" required />
+
+    <label for="email-address">Email:</label>
+    <input type="email" id="email-address" placeholder="you@example.com" required />
+
+    <label for="amount">Amount (₵):</label>
+    <input type="number" id="amount" value="100" readonly />
+
+    <label for="chat-id">Telegram Chat ID:</label>
+    <input type="text" id="chat-id" placeholder="@yourchatid" required />
+
+    <button type="submit">Pay Now</button>
+  </form>
+
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+  <script>
+    const paymentForm = document.getElementById('paymentForm');
+    paymentForm.addEventListener('submit', payWithPaystack);
+
+    function payWithPaystack(e) {
+      e.preventDefault();
+
+      const fullName = document.getElementById('full-name').value;
+      const email = document.getElementById('email-address').value;
+      const chatId = document.getElementById('chat-id').value;
+      const amount = 100;
+
+      if (!fullName || !email || !chatId) {
+        alert('Please fill all fields.');
+        return;
+      }
+
+      let handler = PaystackPop.setup({
+        key: 'pk_live_6f17a88f751d54a7b085a9ce10571d6f5e1d48e2',
+        email: email,
+        amount: amount * 100,
+        currency: 'GHS',
+        metadata: {
+          custom_fields: [
+            { display_name: "Full Name", variable_name: "full_name", value: fullName },
+            { display_name: "Telegram Chat ID", variable_name: "chat_id", value: chatId }
+          ]
+        },
+        callback: function(response) {
+          alert('Payment complete! Reference: ' + response.reference);
+        },
+        onClose: function() {
+          alert('Transaction was not completed, window closed.');
+        }
+      });
+
+      handler.openIframe();
+    }
+  </script>
+</body>
+</html>
